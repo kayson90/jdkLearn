@@ -595,8 +595,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 ((k = first.key) == key || (key != null && key.equals(k))))
                 return first;
             if ((e = first.next) != null) {
+            	//遍历红黑树
                 if (first instanceof TreeNode)
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+                //遍历链表
                 do {
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
@@ -663,23 +665,30 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
+            //判断如果是树节点类型，那么插入树中
             else if (p instanceof TreeNode)
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {
                 for (int binCount = 0; ; ++binCount) {
+                	//寻找下一个节点，如果没有下一个节点，直接添加节点
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);
-                        //链表长度大于8
+                        //链表长度大于8，这里加了一个节点，所以是-1
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                        	//变成红黑树了
                             treeifyBin(tab, hash);
+                        //已经将节点放入了，所以就退出循环
                         break;
                     }
+                    //链表中的key相同，也要走到替换的逻辑
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
+                    //链表向前遍历
                     p = e;
                 }
             }
+            //相同的key，此时将value进行替换
             if (e != null) { // existing mapping for key
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
@@ -688,7 +697,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 return oldValue;
             }
         }
-        //map修改次数
+        //map修改次数，是结构性改变才行，节点数量变化了
         ++modCount;
         //这里的size并不是加到数组的size，而是整个hashmap里面的size。
         if (++size > threshold)
@@ -704,13 +713,16 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * Otherwise, because we are using power-of-two expansion, the
      * elements from each bin must either stay at same index, or move
      * with a power of two offset in the new table.
-     * 这里边透露出来一个重要的信息，就是扩容的时候，要么保持在原来的索引，要么是2倍
+     * 这里边透露出来一个重要的信息，就是扩容的时候，要么保持在原来的索引，要么是当前索引加上原来数组长度
+	 * 原因在于高位由0变成1了，因为生成hash也是伪随机，基本上链表的长度会变成原来的一半
      *
      * @return the table
      */
     final Node<K,V>[] resize() {
         Node<K,V>[] oldTab = table;
+        //16
         int oldCap = (oldTab == null) ? 0 : oldTab.length;
+        //12
         int oldThr = threshold;
         int newCap, newThr = 0;
         if (oldCap > 0) {
@@ -738,9 +750,11 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                       (int)ft : Integer.MAX_VALUE);
         }
         threshold = newThr;
+        //重新创建数组
         @SuppressWarnings({"rawtypes","unchecked"})
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
         table = newTab;
+        //将旧的数组放到新的数组里面
         if (oldTab != null) {
             //遍历旧的数组
             for (int j = 0; j < oldCap; ++j) {
@@ -759,6 +773,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         Node<K,V> next;
                         do {
                             next = e.next;
+                            //这里不是n-1了，这里如果是16，就是10000，高位为1放到新的位置
                             if ((e.hash & oldCap) == 0) {
                                 if (loTail == null)
                                     loHead = e;
@@ -774,10 +789,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                 hiTail = e;
                             }
                         } while ((e = next) != null);
+                        //放在原来的索引
                         if (loTail != null) {
                             loTail.next = null;
                             newTab[j] = loHead;
                         }
+                        //原来的索引+旧的容量
                         if (hiTail != null) {
                             hiTail.next = null;
                             newTab[j + oldCap] = hiHead;
@@ -799,19 +816,24 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final void treeifyBin(Node<K,V>[] tab, int hash) {
         int n, index; Node<K,V> e;
         if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
+        	//用扩容来缓解，因为扩容也会将链表的长度变短
             resize();
         else if ((e = tab[index = (n - 1) & hash]) != null) {
             TreeNode<K,V> hd = null, tl = null;
             do {
+            	//转换成为一个红黑树的节点
                 TreeNode<K,V> p = replacementTreeNode(e, null);
+                //将桶里面的元素变成头结点
                 if (tl == null)
                     hd = p;
                 else {
                     p.prev = tl;
                     tl.next = p;
                 }
+                //同时也是尾结点
                 tl = p;
             } while ((e = e.next) != null);
+            //把红黑树放到桶里面
             if ((tab[index] = hd) != null)
                 hd.treeify(tab);
         }
@@ -859,14 +881,17 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         Node<K,V>[] tab; Node<K,V> p; int n, index;
         if ((tab = table) != null && (n = tab.length) > 0 &&
             (p = tab[index = (n - 1) & hash]) != null) {
+        	//开始删除
             Node<K,V> node = null, e; K k; V v;
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 node = p;
             else if ((e = p.next) != null) {
                 if (p instanceof TreeNode)
+                	//在红黑树查找节点
                     node = ((TreeNode<K,V>)p).getTreeNode(hash, key);
                 else {
+                	//遍历链表查找元素
                     do {
                         if (e.hash == hash &&
                             ((k = e.key) == key ||
@@ -878,6 +903,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     } while ((e = e.next) != null);
                 }
             }
+            //一般不校验value
             if (node != null && (!matchValue || (v = node.value) == value ||
                                  (value != null && value.equals(v)))) {
                 if (node instanceof TreeNode)
@@ -1332,6 +1358,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 for (Node<K,V> e = tab[i]; e != null; e = e.next)
                     action.accept(e.key, e.value);
             }
+            //这里实际上就是一个乐观锁
             if (modCount != mc)
                 throw new ConcurrentModificationException();
         }
@@ -1892,6 +1919,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
          * Finds the node starting at root p with the given hash and key.
          * The kc argument caches comparableClassFor(key) upon first use
          * comparing keys.
+		 * 红黑树的遍历
          */
         final TreeNode<K,V> find(int h, Object k, Class<?> kc) {
             TreeNode<K,V> p = this;
@@ -1946,6 +1974,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
         /**
          * Forms tree of the nodes linked from this node.
+		 * 变成平衡红黑树
          * @return root of tree
          */
         final void treeify(Node<K,V>[] tab) {
@@ -2084,6 +2113,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 return;
             if (root.parent != null)
                 root = root.root();
+            //这个地方是某个桶的红黑树节点比较少，变成链表的结构
+			//网上很多地方说的是删除的时候节点数小于6个就变成红黑树，不是这样的，删除的时候不判断节点个数
+			//在扩容的时候判断是否要变成链表
             if (root == null || root.right == null ||
                 (rl = root.left) == null || rl.left == null) {
                 tab[index] = first.untreeify(map);  // too small

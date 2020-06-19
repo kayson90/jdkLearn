@@ -51,5 +51,9 @@ public class HashMapTest
 		int res = tableSizeFor(100);
 		System.out.println(res);
 		printBinary(6);
+		//这个并不会报错，ConcurrentModificationException没有报也不是说是线程安全的
+		map.forEach((k,v)->map.put(k,v*v));
+		//增加了节点数量，ConcurrentModificationException报了这个异常
+		map.forEach((k,v)->map.put(k+1,v));
 	}
 }

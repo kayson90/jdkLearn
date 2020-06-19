@@ -26,7 +26,7 @@ public class ConsumerTest
 	public static void main(String[] args)
 	{
 		consumer(System.out::println);
-		function(System.out::println);
+		//function(System.out::println);
 		function(ConsumerTest::test);
 		consumer(ConsumerTest::test);
 	}
