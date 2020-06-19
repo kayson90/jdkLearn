@@ -659,6 +659,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             Node<K,V> e; K k;
             //如果hash值相同，key不相同，那么说明要进行拉链操作，而不是替换了。
             //这里回顾一下小知识点，==和equals有什么区别？
+            //每个类都要继承Object，如果不覆盖equals方法就是比较引用。
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;

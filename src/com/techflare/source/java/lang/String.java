@@ -974,6 +974,7 @@ public final class String
      * @see  #equalsIgnoreCase(String)
      */
     public boolean equals(Object anObject) {
+        //如果是同一个对象，肯定是相等的
         if (this == anObject) {
             return true;
         }
@@ -984,6 +985,7 @@ public final class String
                 char v1[] = value;
                 char v2[] = anotherString.value;
                 int i = 0;
+                //逐步比较字符，如果相等就是相等的。也就是比较内容。
                 while (n-- != 0) {
                     if (v1[i] != v2[i])
                         return false;
